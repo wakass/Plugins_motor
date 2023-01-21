@@ -744,8 +744,10 @@ static void write_line (char *s)
 //
 static void report_sg_status (sys_state_t state)
 {
-    hal.stream.write("[SG:");
+    hal.stream.write("[SG: [sg_result: ");
     hal.stream.write(uitoa(stepper[report.sg_status_motor]->get_sg_result(report.sg_status_motor)));
+    hal.stream.write("] [tstep: ");
+    hal.stream.write(uitoa(stepper[report.sg_status_motor]->get_tstep(report.sg_status_motor)));
     hal.stream.write("]" ASCII_EOL);
 }
 
