@@ -1049,8 +1049,14 @@ static void trinamic_MCodeExecute (uint_fast16_t state, parser_block_t *gc_block
                         motor = n_motors;
                         do {
                             if((axis = motor_map[--motor].axis) == report.sg_status_motor) {
-                                stepper[motor]->stallguard_enable(motor, settings.homing.feed_rate, settings.axis[axis].steps_per_mm, trinamic.driver[motor_map[motor].axis].homing_seek_sensitivity);
+                                //Adjust rate to clamp to the maximum rate of the axis
+                                float adj_rate = settings.homing.feed_rate;
+                                if (settings.homing.feed_rate > settings.axis[axis].max_rate)
+                                    adj_rate = settings.axis[axis].max_rate;
+
+                                stepper[motor]->stallguard_enable(motor, adj_rate, settings.axis[axis].steps_per_mm, trinamic.driver[motor_map[motor].axis].homing_seek_sensitivity);
                                 stepper[motor]->sg_filter(motor, report.sfilt);
+
                                 if(stepper[motor]->set_thigh_raw) // TODO: TMC2209 do not have this...
                                     stepper[motor]->set_thigh_raw(motor, 0);
                             }
@@ -1106,7 +1112,7 @@ static void trinamic_MCodeExecute (uint_fast16_t state, parser_block_t *gc_block
         case Trinamic_HybridThreshold:
             {
                 uint_fast8_t axis;
-                do {
+                do {    
                     axis = motor_map[--motor].axis;
                     if(!isnanf(gc_block->values.xyz[axis])) // mm/min
                         stepper[motor]->set_tpwmthrs(motor, gc_block->values.xyz[axis] / 60.0f, settings.axis[axis].steps_per_mm);
@@ -1197,10 +1203,14 @@ static void trinamic_on_homing (axes_signals_t axes, float rate, bool pulloff)
                 else if(trinamic.driver[axis].mode == TMCMode_CoolStep)
                     stepper[motor]->coolstep_enable(motor);
             } else if(current_homing_rate != rate) {
+                float adj_rate = rate;
+                if (rate > settings.axis[axis].max_rate)
+                    adj_rate = settings.axis[axis].max_rate;
+
                 if(rate == settings.homing.feed_rate)
-                    stepper[motor]->stallguard_enable(motor, rate, settings.axis[axis].steps_per_mm, trinamic.driver[axis].homing_feed_sensitivity);
+                    stepper[motor]->stallguard_enable(motor, adj_rate, settings.axis[axis].steps_per_mm, trinamic.driver[axis].homing_feed_sensitivity);
                 else
-                    stepper[motor]->stallguard_enable(motor, rate, settings.axis[axis].steps_per_mm, trinamic.driver[axis].homing_seek_sensitivity);
+                    stepper[motor]->stallguard_enable(motor, adj_rate, settings.axis[axis].steps_per_mm, trinamic.driver[axis].homing_seek_sensitivity);
             }
         }
     } while(motor);
