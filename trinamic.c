@@ -1374,6 +1374,7 @@ static float trinamic_get_homing_rate (axes_signals_t axes, homing_mode_t mode)
             else if(feed_rate != rate_cfg) {
                 feed_rate = 0.0f;
                 break;
+
             }
         }
     } while(motor);
